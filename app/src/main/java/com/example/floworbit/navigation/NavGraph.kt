@@ -38,8 +38,9 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
+        // ✅ Focus screen: no navController needed
         composable(Routes.FOCUS) {
-            FocusTimerScreen(navController = navController)
+            FocusTimerScreen()
         }
     }
 }
