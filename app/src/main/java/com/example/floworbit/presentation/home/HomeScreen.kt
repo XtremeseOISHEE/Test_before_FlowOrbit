@@ -45,7 +45,7 @@ fun HomeScreen(
                 ExtendedFloatingActionButton(
                     onClick = { onStartFocus() }
                 ) {
-                    Text("Start Focus")
+                    Text("Focus")
                 }
             }
         }

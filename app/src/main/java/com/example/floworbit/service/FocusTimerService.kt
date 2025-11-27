@@ -1,25 +1,22 @@
 package com.example.floworbit.service
 
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
-import android.app.Service
+import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import android.content.pm.ServiceInfo
 import androidx.core.app.NotificationCompat
+import androidx.lifecycle.LifecycleService
 import com.example.floworbit.MainActivity
+import com.example.floworbit.util.DNDManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class FocusTimerService : Service() {
+class FocusTimerService : LifecycleService() {
 
     companion object {
-
         const val CHANNEL_ID = "focus_timer_channel"
         const val NOTIFICATION_ID = 101
 
@@ -37,13 +34,18 @@ class FocusTimerService : Service() {
     }
 
     private var timerJob: Job? = null
+    private lateinit var dndManager: DNDManager
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        dndManager = DNDManager(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+
+        // FIXED: super must be the first line
+        super.onStartCommand(intent, flags, startId)
 
         when (intent?.action) {
             ACTION_START -> {
@@ -65,7 +67,7 @@ class FocusTimerService : Service() {
 
         val notification = buildNotification(formatTime(durationMillis))
 
-        // ✅ ANDROID 14 FIX — MUST PASS foregroundServiceType
+        // Android 14 fix
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(
                 NOTIFICATION_ID,
@@ -76,6 +78,11 @@ class FocusTimerService : Service() {
             startForeground(NOTIFICATION_ID, notification)
         }
 
+        // FIX: updated function name
+        if (dndManager.hasAccess()) {
+            dndManager.enableDND()
+        }
+
         timerJob = CoroutineScope(Dispatchers.Default).launch {
             while (_running.value && _remaining.value > 0) {
                 delay(1000)
@@ -83,9 +90,7 @@ class FocusTimerService : Service() {
 
                 updateNotification(formatTime(_remaining.value))
 
-                if (_remaining.value <= 0) {
-                    finishSession()
-                }
+                if (_remaining.value <= 0) finishSession()
             }
         }
     }
@@ -101,6 +106,11 @@ class FocusTimerService : Service() {
         timerJob?.cancel()
         _remaining.value = 0L
 
+        // FIX
+        if (dndManager.hasAccess()) {
+            dndManager.disableDND()
+        }
+
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -111,9 +121,12 @@ class FocusTimerService : Service() {
 
         updateNotification("Completed!")
 
-        // keep notification visible
-        stopForeground(STOP_FOREGROUND_DETACH)
+        // FIX
+        if (dndManager.hasAccess()) {
+            dndManager.disableDND()
+        }
 
+        stopForeground(STOP_FOREGROUND_DETACH)
         stopSelf()
     }
 
@@ -147,19 +160,20 @@ class FocusTimerService : Service() {
                 "Focus Timer",
                 NotificationManager.IMPORTANCE_LOW
             )
-
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
         }
     }
 
-    override fun onBind(intent: Intent?): IBinder? = null
+    // FIX: correct signature
+    override fun onBind(intent: Intent): IBinder? {
+        return super.onBind(intent)
+    }
 
     private fun formatTime(ms: Long): String {
         val totalSeconds = ms / 1000
         val minutes = totalSeconds / 60
         val seconds = totalSeconds % 60
-
         return "%02d:%02d".format(minutes, seconds)
     }
 }

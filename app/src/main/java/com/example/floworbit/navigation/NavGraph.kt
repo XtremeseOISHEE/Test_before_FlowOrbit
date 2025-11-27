@@ -7,17 +7,25 @@ import androidx.navigation.compose.composable
 import com.example.floworbit.presentation.focus.FocusTimerScreen
 import com.example.floworbit.presentation.home.HomeScreen
 import com.example.floworbit.presentation.task.TaskDetailScreen
+import com.example.floworbit.ui.dnd.DNDPermissionScreen
 
 object Routes {
     const val HOME = "home"
     const val TASK_DETAIL = "task_detail"
     const val FOCUS = "focus"
+    const val DND_PERMISSION = "dnd_permission"
 }
 
 @Composable
 fun NavGraph(navController: NavHostController) {
 
-    NavHost(navController = navController, startDestination = Routes.HOME) {
+    // 🟣 NEW: Start from DND permission screen
+    NavHost(navController = navController, startDestination = Routes.DND_PERMISSION) {
+
+        // 🟣 Check DND permission first
+        composable(Routes.DND_PERMISSION) {
+            DNDPermissionScreen(navController)
+        }
 
         composable(Routes.HOME) {
             HomeScreen(
@@ -38,7 +46,7 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
-        // ✅ Focus screen: no navController needed
+        // 🔵 Focus Screen is UNCHANGED (your MVVM logic safe)
         composable(Routes.FOCUS) {
             FocusTimerScreen()
         }
