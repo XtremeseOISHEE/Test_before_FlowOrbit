@@ -28,6 +28,9 @@ fun FocusTimerScreen(
     val remaining by focusViewModel.remaining.collectAsState()
     val running by focusViewModel.running.collectAsState()
 
+    // 🔥 NEW — for custom minutes
+    var customMinutes by remember { mutableStateOf("") }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -40,11 +43,43 @@ fun FocusTimerScreen(
             fontSize = 48.sp
         )
 
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(30.dp))
 
+        // 🔥 NEW — Custom timer input (only visible when NOT running)
         if (!running) {
-            Button(onClick = { focusViewModel.start(25) }) {
-                Text("Start Focus (25 min)")
+            OutlinedTextField(
+                value = customMinutes,
+                onValueChange = { customMinutes = it.filter { c -> c.isDigit() } },
+                label = { Text("Custom Minutes") },
+                singleLine = true,
+                modifier = Modifier.width(180.dp)
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+        }
+
+        // Buttons
+        if (!running) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+
+                // Default Pomodoro
+                Button(onClick = { focusViewModel.start(25) }) {
+                    Text("Start Focus (25 min)")
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Custom Start button
+                Button(
+                    onClick = {
+                        val minutes = customMinutes.toIntOrNull() ?: 0
+                        if (minutes > 0) {
+                            focusViewModel.start(minutes)
+                        }
+                    }
+                ) {
+                    Text("Start Custom")
+                }
             }
         } else {
             Button(onClick = { focusViewModel.pause() }) {
