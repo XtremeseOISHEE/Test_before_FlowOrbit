@@ -1,21 +1,32 @@
 package com.example.floworbit.presentation.focus
 
+import android.app.Application
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.floworbit.presentation.dnd.DNDViewModel
 import com.example.floworbit.util.formatMillis
 
 @Composable
 fun FocusTimerScreen(
-    viewModel: FocusTimerViewModel = viewModel()
+    app: Application = LocalContext.current.applicationContext as Application
 ) {
-    val remaining by viewModel.remaining.collectAsState()
-    val running by viewModel.running.collectAsState()
+    // First: DND ViewModel
+    val dndViewModel: DNDViewModel = viewModel()
+
+    // Second: Focus ViewModel using factory
+    val focusViewModel: FocusTimerViewModel = viewModel(
+        factory = FocusTimerViewModelFactory(app, dndViewModel)
+    )
+
+    val remaining by focusViewModel.remaining.collectAsState()
+    val running by focusViewModel.running.collectAsState()
 
     Column(
         modifier = Modifier
@@ -32,17 +43,17 @@ fun FocusTimerScreen(
         Spacer(modifier = Modifier.height(40.dp))
 
         if (!running) {
-            Button(onClick = { viewModel.start(25) }) {
+            Button(onClick = { focusViewModel.start(25) }) {
                 Text("Start Focus (25 min)")
             }
         } else {
-            Button(onClick = { viewModel.pause() }) {
+            Button(onClick = { focusViewModel.pause() }) {
                 Text("Pause")
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            Button(onClick = { viewModel.stop() }) {
+            Button(onClick = { focusViewModel.stop() }) {
                 Text("Stop")
             }
         }

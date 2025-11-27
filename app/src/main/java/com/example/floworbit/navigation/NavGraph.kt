@@ -1,6 +1,9 @@
 package com.example.floworbit.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -8,6 +11,7 @@ import com.example.floworbit.presentation.focus.FocusTimerScreen
 import com.example.floworbit.presentation.home.HomeScreen
 import com.example.floworbit.presentation.task.TaskDetailScreen
 import com.example.floworbit.ui.dnd.DNDPermissionScreen
+import com.example.floworbit.presentation.dnd.DNDViewModel
 
 object Routes {
     const val HOME = "home"
@@ -19,14 +23,37 @@ object Routes {
 @Composable
 fun NavGraph(navController: NavHostController) {
 
-    // 🟣 NEW: Start from DND permission screen
+// Start from DND permission screen
     NavHost(navController = navController, startDestination = Routes.DND_PERMISSION) {
 
-        // 🟣 Check DND permission first
+        // DND Permission Screen
         composable(Routes.DND_PERMISSION) {
-            DNDPermissionScreen(navController)
+            // Create DNDViewModel
+            val dndViewModel: DNDViewModel = viewModel()
+
+            // Check permission on composition
+            LaunchedEffect(Unit) {
+                dndViewModel.checkPermission()
+            }
+
+            // Observe permission StateFlow
+            val hasPermissionState = dndViewModel.hasPermission.collectAsState(initial = false)
+            val hasPermission = hasPermissionState.value
+
+            // Navigate to Home automatically if permission granted
+            LaunchedEffect(hasPermission) {
+                if (hasPermission) {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.DND_PERMISSION) { inclusive = true }
+                    }
+                }
+            }
+
+            // Show DNDPermissionScreen UI
+            DNDPermissionScreen(navController = navController, dndViewModel = dndViewModel)
         }
 
+        // Home Screen
         composable(Routes.HOME) {
             HomeScreen(
                 onOpenTask = { id ->
@@ -38,6 +65,7 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
+        // Task Detail Screen
         composable("${Routes.TASK_DETAIL}/{taskId}") { backStackEntry ->
             val taskId = backStackEntry.arguments?.getString("taskId") ?: ""
             TaskDetailScreen(
@@ -46,9 +74,11 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
-        // 🔵 Focus Screen is UNCHANGED (your MVVM logic safe)
+        // Focus Timer Screen
         composable(Routes.FOCUS) {
             FocusTimerScreen()
         }
     }
+
+
 }
