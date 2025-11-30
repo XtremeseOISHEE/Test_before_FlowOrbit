@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
@@ -12,11 +13,9 @@ import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
-import android.widget.FrameLayout
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
-import com.example.floworbit.util.AllowanceManager
 import com.example.floworbit.util.OverlayPermissionHelper
 
 class WarningOverlayService : Service() {
@@ -31,8 +30,6 @@ class WarningOverlayService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-
-        // Foreground notification so Android allows overlay service
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val ch = NotificationChannel(
                 CHANNEL_ID,
@@ -42,14 +39,12 @@ class WarningOverlayService : Service() {
             val nm = getSystemService(NotificationManager::class.java)
             nm.createNotificationChannel(ch)
         }
-
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("FlowOrbit")
             .setContentText("Showing focus overlay")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setOngoing(true)
             .build()
-
         startForeground(NOTIF_ID, notification)
     }
 
@@ -73,22 +68,30 @@ class WarningOverlayService : Service() {
 
     private fun showOverlay(packageName: String, label: String) {
         val tv = TextView(this).apply {
-            text = "You opened $label\nStay focused?"
-            setTextColor(ContextCompat.getColor(this@WarningOverlayService, android.R.color.white))
-            textSize = 20f
+            text = "You opened '$label'.\nStay focused on your task!"
+            setTextColor(Color.WHITE)
+            textSize = 24f
+            gravity = Gravity.CENTER_HORIZONTAL
             setPadding(40, 40, 40, 40)
         }
 
-        val btnReturn = Button(this).apply { text = "Return to Focus" }
         val btnContinue = Button(this).apply { text = "Allow 5 min" }
         val btnGoHome = Button(this).apply { text = "Go Home (Close App)" }
 
-        val container = FrameLayout(this).apply {
-            setBackgroundColor(0xDD000000.toInt())
+        val buttonLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            addView(btnContinue, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = 32 })
+            addView(btnGoHome, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = 16 })
+        }
+
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(50, 50, 50, 50)
+            setBackgroundColor(Color.parseColor("#E6000000"))
             addView(tv)
-            addView(btnReturn)
-            addView(btnContinue)
-            addView(btnGoHome)
+            addView(buttonLayout)
         }
 
         val params = WindowManager.LayoutParams(
@@ -98,22 +101,17 @@ class WarningOverlayService : Service() {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             else
                 WindowManager.LayoutParams.TYPE_PHONE,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         )
 
-        params.gravity = Gravity.CENTER
-
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         overlayView = container
-
         windowManager?.addView(container, params)
 
-        btnReturn.setOnClickListener { removeOverlay() }
-
         btnContinue.setOnClickListener {
-            val until = System.currentTimeMillis() + 5 * 60 * 1000L
-            AllowanceManager.setAllowanceUntil(this, packageName, until)
+            // Pass the specific package name to the allowance state
+            AllowanceState.startAllowance(packageName)
             removeOverlay()
         }
 
@@ -123,7 +121,7 @@ class WarningOverlayService : Service() {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             startActivity(home)
-            AllowanceManager.clearAllowance(this, packageName)
+            AllowanceState.stopAllowance() // Stop timer if user closes early
             removeOverlay()
         }
     }
@@ -132,7 +130,6 @@ class WarningOverlayService : Service() {
         try {
             overlayView?.let { windowManager?.removeView(it) }
         } catch (_: Exception) {}
-
         overlayView = null
         stopSelf()
     }
