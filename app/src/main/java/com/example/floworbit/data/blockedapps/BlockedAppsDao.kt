@@ -25,4 +25,10 @@ interface BlockedAppDao {
     // ⭐ NEW: THIS IS REQUIRED FOR ACCESSIBILITY BLOCKER
     @Query("SELECT packageName FROM blocked_apps")
     suspend fun getBlockedPackageNames(): List<String>
+
+    // ⭐ REPLACE THE OLD isBlocked FUNCTION WITH THIS ONE
+    @Query("SELECT EXISTS(SELECT 1 FROM blocked_apps WHERE packageName = :packageName)")
+    suspend fun isBlocked(packageName: String): Boolean
+
+
 }

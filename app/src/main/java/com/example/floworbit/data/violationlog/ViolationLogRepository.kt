@@ -10,4 +10,8 @@ class ViolationLogRepository(context: Context) {
 
     suspend fun addLog(log: ViolationLog) = dao.insert(log)
     fun allLogs(): Flow<List<ViolationLog>> = dao.getAll()
+
+    suspend fun insert(log: ViolationLog) {
+        dao.insert(log)
+    }
 }

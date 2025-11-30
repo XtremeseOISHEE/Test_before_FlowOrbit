@@ -60,33 +60,61 @@ class AppTrackingService : Service() {
             .setOngoing(true)
             .build()
 
+    // ... inside the AppTrackingService class
+
     private fun startPolling() {
         serviceScope.launch {
             while (isActive) {
-                val foreground = queryForegroundPackage()
-                if (foreground != null && foreground != lastForeground) {
-                    lastForeground = foreground
+                val foregroundPackage = queryForegroundPackage()
+                if (foregroundPackage != null && foregroundPackage != lastForeground) {
+                    Log.d("FLOW", "Foreground changed to: $foregroundPackage")
 
-                    val blocked = blockedRepo.getBlockedApps().first()
-                    val blockedApp = blocked.find { it.packageName == foreground }
+                    val isBlocked = blockedRepo.isAppBlocked(foregroundPackage)
 
-                    if (blockedApp != null &&
-                        !AllowanceManager.isAllowedNow(applicationContext, foreground)
-                    ) {
-                        startOverlay(foreground, blockedApp.label)
+                    Log.d("FLOW_Check", "Checking database for $foregroundPackage. Is it blocked? $isBlocked")
 
-                        logRepo.addLog(
+                    if (isBlocked) {
+                        // --- ⭐ FIX IS HERE ---
+
+                        // 1. Get the app's name (label)
+                        val appLabel = try {
+                            val appInfo = packageManager.getApplicationInfo(foregroundPackage, 0)
+                            packageManager.getApplicationLabel(appInfo).toString()
+                        } catch (e: Exception) {
+                            foregroundPackage // Fallback to package name if label can't be found
+                        }
+
+                        // 2. Log the violation with the app's name
+                        logRepo.insert(
                             ViolationLog(
-                                packageName = foreground,
-                                label = blockedApp.label
+                                packageName = foregroundPackage,
+                                label = appLabel // Pass the label here
                             )
                         )
+
+                        // 3. Start the overlay
+                        // 3. Start the overlay
+                        val intent = Intent(this@AppTrackingService, WarningOverlayService::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            // ⭐ CORRECTED KEYS to match WarningOverlayService
+                            putExtra("pkg", foregroundPackage)
+                            putExtra("label", appLabel)
+                        }
+
+
+                        startService(intent)
                     }
+
+                    lastForeground = foregroundPackage
                 }
-                delay(1000)
+                delay(1000) // Poll every second
             }
         }
     }
+
+// ... rest of the file
+
+
 
     private fun startOverlay(pkg: String, label: String?) {
         val intent = Intent(this, WarningOverlayService::class.java).apply {

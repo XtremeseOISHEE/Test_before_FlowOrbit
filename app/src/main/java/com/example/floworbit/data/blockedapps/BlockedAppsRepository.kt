@@ -19,4 +19,8 @@ class BlockedAppsRepository(context: Context) {
     suspend fun getBlockedPackageNames(): List<String> {
         return dao.getBlockedPackageNames()
     }
+    suspend fun isAppBlocked(packageName: String): Boolean {
+        return dao.isBlocked(packageName)
+    }
+
 }
