@@ -6,9 +6,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Analytics // ⭐ 1. Import Analytics Icon
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -18,11 +22,12 @@ import com.example.floworbit.domain.model.Task
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    vm: HomeViewModel = viewModel(),
     onOpenTask: (String) -> Unit,
-    onStartFocus: () -> Unit = {},
-    onOpenBlockedApps: () -> Unit = {}   // ⭐ Added
+    onStartFocus: () -> Unit,
+    onOpenBlockedApps: () -> Unit,
+    onOpenAnalytics: () -> Unit // ⭐ 2. Add the missing parameter
 ) {
-    val vm: HomeViewModel = viewModel()
     val tasks by vm.tasks.collectAsState()
 
     var showDialog by remember { mutableStateOf(false) }
@@ -34,28 +39,32 @@ fun HomeScreen(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("FlowOrbit") },
-
-                // ⭐ Blocked Apps button
                 actions = {
+                    // This was your existing button for Blocked Apps
                     IconButton(onClick = onOpenBlockedApps) {
                         Icon(
                             Icons.Default.Settings,
                             contentDescription = "Blocked Apps"
                         )
                     }
+                    // ⭐ 3. Add the new button for Analytics
+                    IconButton(onClick = onOpenAnalytics) {
+                        Icon(
+                            Icons.Default.Analytics,
+                            contentDescription = "Open Analytics"
+                        )
+                    }
                 }
             )
         },
-
         floatingActionButton = {
-            Column {
+            Column(horizontalAlignment = Alignment.End) { // Aligned to end for consistency
                 FloatingActionButton(
                     onClick = { showDialog = true },
                     modifier = Modifier.padding(bottom = 12.dp)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Add Task")
                 }
-
                 ExtendedFloatingActionButton(onClick = onStartFocus) {
                     Text("Focus")
                 }
@@ -76,7 +85,7 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp)
                 ) {
-                    items(tasks) { task ->
+                    items(tasks, key = { it.id }) { task -> // Added key for performance
                         TaskItem(
                             task = task,
                             onClick = { onOpenTask(task.id) },
@@ -91,7 +100,6 @@ fun HomeScreen(
                 AlertDialog(
                     onDismissRequest = { showDialog = false },
                     title = { Text("Add Task") },
-
                     text = {
                         Column {
                             OutlinedTextField(
@@ -100,14 +108,12 @@ fun HomeScreen(
                                 label = { Text("Title") }
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-
                             OutlinedTextField(
                                 value = description,
                                 onValueChange = { description = it },
                                 label = { Text("Description") }
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-
                             OutlinedTextField(
                                 value = category,
                                 onValueChange = { category = it },
@@ -115,7 +121,6 @@ fun HomeScreen(
                             )
                         }
                     },
-
                     confirmButton = {
                         TextButton(onClick = {
                             vm.addTask(
@@ -131,7 +136,6 @@ fun HomeScreen(
                             Text("Add")
                         }
                     },
-
                     dismissButton = {
                         TextButton(onClick = { showDialog = false }) {
                             Text("Cancel")
@@ -143,6 +147,7 @@ fun HomeScreen(
     }
 }
 
+// This is YOUR original TaskItem composable, with no checkbox.
 @Composable
 fun TaskItem(
     task: Task,
@@ -159,20 +164,18 @@ fun TaskItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-
                 Text(task.title, style = MaterialTheme.typography.titleMedium)
-
                 if (task.description.isNotEmpty()) {
                     Text(task.description, style = MaterialTheme.typography.bodySmall)
                 }
-
                 task.category?.let {
                     Text("Category: $it", style = MaterialTheme.typography.labelSmall)
                 }
             }
-
+            // I'm using the Delete Icon here as it's better than text,
+            // but the functionality is identical to your original code.
             IconButton(onClick = onDelete) {
-                Text("Del")
+                Icon(Icons.Default.Delete, contentDescription = "Delete Task")
             }
         }
     }

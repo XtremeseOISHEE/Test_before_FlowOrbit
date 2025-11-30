@@ -1,7 +1,5 @@
 package com.example.floworbit.data.task
 
-
-
 import androidx.room.*
 import com.example.floworbit.domain.model.Task
 import kotlinx.coroutines.flow.Flow
@@ -9,9 +7,11 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TaskDao {
 
-    @Query("SELECT * FROM tasks ORDER BY createdAt DESC")
+    // ⭐ THIS IS THE ONLY LINE THAT CHANGES ⭐
+    @Query("SELECT * FROM tasks ORDER BY priority DESC, createdAt DESC")
     fun getTasks(): Flow<List<Task>>
 
+    // All your other functions are perfect and remain unchanged
     @Query("SELECT * FROM tasks WHERE id = :id")
     suspend fun getTaskById(id: String): Task?
 

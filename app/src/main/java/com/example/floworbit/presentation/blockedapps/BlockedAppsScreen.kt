@@ -24,35 +24,43 @@ fun BlockedAppsScreen(vm: BlockedAppsViewModel = viewModel()) {
     val context = LocalContext.current
     val apps by vm.apps.collectAsState()
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Select apps to block:", style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(12.dp))
+    // ⭐ 1. Add the Scaffold. It provides the correct background color from your theme.
+    Scaffold { paddingValues ->
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(modifier = Modifier.weight(1f), onClick = { AppUtils.openInstalledAppsSettings(context) }) {
-                Text("Installed Apps")
+        // Your existing Column now goes inside the Scaffold.
+        // ⭐ 2. Apply the padding from the Scaffold to the Column.
+        Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp)) {
+            Text("Select apps to block:", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(12.dp))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(modifier = Modifier.weight(1f), onClick = { AppUtils.openInstalledAppsSettings(context) }) {
+                    Text("Installed Apps")
+                }
+                Button(modifier = Modifier.weight(1f), onClick = {
+                    val intent = UsagePermissionHelper.requestUsageAccessIntent()
+                    if (context is Activity) context.startActivity(intent)
+                    else context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                }) { Text("Usage Access") }
+                Button(modifier = Modifier.weight(1f), onClick = {
+                    val intent = OverlayPermissionHelper.requestOverlayIntent(context.packageName)
+                    if (context is Activity) context.startActivity(intent)
+                    else context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                }) { Text("Overlay") }
             }
-            Button(modifier = Modifier.weight(1f), onClick = {
-                val intent = UsagePermissionHelper.requestUsageAccessIntent()
-                if (context is Activity) context.startActivity(intent)
-                else context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            }) { Text("Usage Access") }
-            Button(modifier = Modifier.weight(1f), onClick = {
-                val intent = OverlayPermissionHelper.requestOverlayIntent(context.packageName)
-                if (context is Activity) context.startActivity(intent)
-                else context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            }) { Text("Overlay") }
-        }
 
-        Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(18.dp))
 
-        LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            items(apps) { app ->
-                AppItemRow(app = app, onToggle = { vm.toggleBlock(app) })
-                Divider()
+            LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                items(apps) { app ->
+                    AppItemRow(app = app, onToggle = { vm.toggleBlock(app) })
+                    Divider()
+                }
             }
         }
+        // ⭐ 3. Close the Scaffold.
     }
+// ⭐ 4. Close the composable function.
 }
 
 @Composable

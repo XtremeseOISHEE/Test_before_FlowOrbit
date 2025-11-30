@@ -42,15 +42,25 @@ class FocusTimerService : LifecycleService() {
         dndManager = DNDManager(this)
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    // In FocusTimerService.kt
 
-        // FIXED: super must be the first line
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
 
         when (intent?.action) {
             ACTION_START -> {
-                val duration = intent.getLongExtra(EXTRA_DURATION, 0L)
-                startTimer(duration)
+                // ⭐ THIS IS THE FIX ⭐
+                // Check if the timer is currently paused.
+                val isResuming = !_running.value && _remaining.value > 0
+
+                if (isResuming) {
+                    // If resuming, just call startTimer with the time we already have.
+                    startTimer(_remaining.value)
+                } else {
+                    // Otherwise, start a brand new session with the duration from the intent.
+                    val duration = intent.getLongExtra(EXTRA_DURATION, 0L)
+                    startTimer(duration)
+                }
             }
             ACTION_PAUSE -> pauseTimer()
             ACTION_STOP -> stopTimer()
@@ -58,6 +68,7 @@ class FocusTimerService : LifecycleService() {
 
         return START_STICKY
     }
+
 
     private fun startTimer(durationMillis: Long) {
         timerJob?.cancel()
