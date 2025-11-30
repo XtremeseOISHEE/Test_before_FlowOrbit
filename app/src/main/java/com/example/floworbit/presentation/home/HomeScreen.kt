@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,7 +19,8 @@ import com.example.floworbit.domain.model.Task
 @Composable
 fun HomeScreen(
     onOpenTask: (String) -> Unit,
-    onStartFocus: () -> Unit = {}
+    onStartFocus: () -> Unit = {},
+    onOpenBlockedApps: () -> Unit = {}   // ⭐ Added
 ) {
     val vm: HomeViewModel = viewModel()
     val tasks by vm.tasks.collectAsState()
@@ -30,7 +32,19 @@ fun HomeScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(title = { Text("FlowOrbit") })
+            CenterAlignedTopAppBar(
+                title = { Text("FlowOrbit") },
+
+                // ⭐ Blocked Apps button
+                actions = {
+                    IconButton(onClick = onOpenBlockedApps) {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = "Blocked Apps"
+                        )
+                    }
+                }
+            )
         },
 
         floatingActionButton = {
@@ -42,9 +56,7 @@ fun HomeScreen(
                     Icon(Icons.Default.Add, contentDescription = "Add Task")
                 }
 
-                ExtendedFloatingActionButton(
-                    onClick = { onStartFocus() }
-                ) {
+                ExtendedFloatingActionButton(onClick = onStartFocus) {
                     Text("Focus")
                 }
             }
@@ -52,7 +64,6 @@ fun HomeScreen(
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
 
-            // Empty state
             if (tasks.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -76,7 +87,6 @@ fun HomeScreen(
                 }
             }
 
-            // Dialog for adding a task
             if (showDialog) {
                 AlertDialog(
                     onDismissRequest = { showDialog = false },

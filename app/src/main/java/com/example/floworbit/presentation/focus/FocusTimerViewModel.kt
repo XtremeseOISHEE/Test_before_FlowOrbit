@@ -1,12 +1,12 @@
 package com.example.floworbit.presentation.focus
 
-
 import android.app.Application
 import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.floworbit.presentation.dnd.DNDViewModel
 import com.example.floworbit.service.FocusTimerService
+import com.example.floworbit.presentation.focus.FocusSessionManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -15,6 +15,7 @@ class FocusTimerViewModel(
     app: Application,
     private val dndViewModel: DNDViewModel
 ) : AndroidViewModel(app) {
+
 
     private val _remaining = MutableStateFlow(0L)
     val remaining = _remaining.asStateFlow()
@@ -36,6 +37,9 @@ class FocusTimerViewModel(
         // 🔥 TURN ON DND
         dndViewModel.enableDND()
 
+        // ✅ Start tracking app usage
+        FocusSessionManager.startTracking(getApplication())
+
         val intent = Intent(getApplication(), FocusTimerService::class.java).apply {
             action = FocusTimerService.ACTION_START
             putExtra(FocusTimerService.EXTRA_DURATION, durationMinutes * 60 * 1000L)
@@ -53,8 +57,12 @@ class FocusTimerViewModel(
         // 🔥 OPTIONAL: Turn off DND when paused
         dndViewModel.disableDND()
 
-        val intent = Intent(getApplication(), FocusTimerService::class.java)
-        intent.action = FocusTimerService.ACTION_PAUSE
+        // ✅ Optional: stop tracking on pause if desired
+        // FocusSessionManager.stopTracking(getApplication())
+
+        val intent = Intent(getApplication(), FocusTimerService::class.java).apply {
+            action = FocusTimerService.ACTION_PAUSE
+        }
         getApplication<Application>().startService(intent)
     }
 
@@ -62,8 +70,14 @@ class FocusTimerViewModel(
         // 🔥 TURN OFF DND
         dndViewModel.disableDND()
 
-        val intent = Intent(getApplication(), FocusTimerService::class.java)
-        intent.action = FocusTimerService.ACTION_STOP
+        // ✅ Stop tracking app usage
+        FocusSessionManager.stopTracking(getApplication())
+
+        val intent = Intent(getApplication(), FocusTimerService::class.java).apply {
+            action = FocusTimerService.ACTION_STOP
+        }
         getApplication<Application>().startService(intent)
     }
+
+
 }
