@@ -6,6 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.floworbit.domain.model.Priority // ⭐ 1. Import Priority
 import com.example.floworbit.presentation.home.HomeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -15,9 +16,13 @@ fun TaskDetailScreen(taskId: String, onBack: () -> Unit) {
     val vm: HomeViewModel = viewModel()
     val task = vm.tasks.collectAsState().value.firstOrNull { it.id == taskId }
 
-    var title by remember { mutableStateOf(task?.title ?: "") }
-    var description by remember { mutableStateOf(task?.description ?: "") }
-    var category by remember { mutableStateOf(task?.category ?: "") }
+    // State for all the editable fields
+    var title by remember(task) { mutableStateOf(task?.title ?: "") }
+    var description by remember(task) { mutableStateOf(task?.description ?: "") }
+    var category by remember(task) { mutableStateOf(task?.category ?: "") }
+    // ⭐ 2. Add state for priority, converting the Int from the database to our Enum
+    var priority by remember(task) { mutableStateOf(Priority.fromInt(task?.priority ?: 0)) }
+
 
     Scaffold(
         topBar = {
@@ -63,6 +68,21 @@ fun TaskDetailScreen(taskId: String, onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             )
 
+            // ⭐ 3. Add the Priority Section UI
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("Priority", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Priority.entries.forEach { prio ->
+                    FilterChip(
+                        selected = priority == prio,
+                        onClick = { priority = prio },
+                        label = { Text(prio.name) }
+                    )
+                }
+            }
+
+
             Spacer(modifier = Modifier.height(16.dp))
 
             Row {
@@ -73,10 +93,13 @@ fun TaskDetailScreen(taskId: String, onBack: () -> Unit) {
                                 it.copy(
                                     title = title,
                                     description = description,
-                                    category = if (category.isBlank()) null else category
+                                    category = if (category.isBlank()) null else category,
+                                    // ⭐ 4. Save the selected priority's integer value
+                                    priority = priority.value
                                 )
                             )
                         }
+                        onBack() // Go back after saving
                     }
                 ) { Text("Save") }
 
